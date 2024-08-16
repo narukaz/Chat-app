@@ -11,7 +11,6 @@ function Signin() {
   const navigate = useNavigate();
 
 
-
   const handleKeyDownID = (event) => {
     if (event.key === "Enter") {
       if (!userId) {
@@ -21,7 +20,7 @@ function Signin() {
         return setError("");
       }}
   };
-
+  
 
   const handleKeyDownPassword = (event) => {
     if (event.key === "Enter") {
@@ -35,7 +34,7 @@ function Signin() {
     };
 
   return (
-    <div className=" flex justify-center items-start mt-[200px] rounded-xl bg-1f86fc h-[100%] w-full overflow-hidden bg-app-bg">
+    <div className="flex justify-center items-start mt-[200px] rounded-xl bg-1f86fc h-[100%] w-full overflow-hidden bg-app-bg">
       <div className="p-2 flex flex-col gap-[20px]">
         <Inputs
           handleKeyDown={handleKeyDownID}
@@ -59,7 +58,7 @@ function Signin() {
         )}
 
         {<Link to="reset-password" className="text-accent-blue text-center">reset password</Link>}
-        {<h3 className="text-text-primary text-center">Don't have an account? <Link to="create-account" className="text-accent-blue">signup</Link></h3>}
+        {<h3 className="text-text-primary text-center">Don't have an account? <Link to="sign-up" className="text-accent-blue">signup</Link></h3>}
         
       </div>
       </div>
