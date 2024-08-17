@@ -1,6 +1,7 @@
-import React, {useState, useRef} from "react";
+import React, {useState, useRef, useContext} from "react";
 import Inputs from "../inputs/Inputs";
 import {Link, useNavigate} from 'react-router-dom'
+import DataContext from "../context/data/dataContext";
 
 function Signin() {
   const [enter, setEnter] = useState(false);
@@ -9,7 +10,7 @@ function Signin() {
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
-
+  const {setLogId} = useContext(DataContext);
 
   const handleKeyDownID = (event) => {
     if (event.key === "Enter") {
@@ -28,6 +29,8 @@ function Signin() {
       if (!password) {
         return setError("input password");
       } else if (password) {
+
+        
         navigate('home')
       }}
     //api call, send user data ahead using axios

@@ -6,12 +6,16 @@ import Home from './components/home/Home'
 import Chatbox from './components/chatbox/chatbox'
 import Welcome from './components/welcome/Welcome'
 import Signup from './components/signup/Signup'
+import DataContext from './components/context/data/dataContext'
+import DataContextProvider from './components/context/data/DataContextProvider'
 
 function App() {
 
   
 
   return (
+    <DataContextProvider>
+
     <div className='p-8 w-full h-screen bg-tertiary-bg'>
     <Routes>
       <Route path='/' element={<Signin/>}/>
@@ -20,10 +24,11 @@ function App() {
       <Route path='home' element={<Home/>}>
        <Route index element={<Welcome/>}/> 
        <Route path='welcome' element={<Welcome/>}/>  
-       <Route path='chat' element={<Chatbox/>}/>      
+       <Route path='chat/:id' element={<Chatbox/>}/>      
       </Route>
     </Routes>            
     </div>
+    </DataContextProvider>
   )
 }
 

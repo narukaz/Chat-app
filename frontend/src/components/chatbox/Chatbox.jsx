@@ -1,9 +1,18 @@
-import React from "react";
+import React,{useContext} from "react";
+import { useParams } from "react-router-dom";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import DeleteForeverRoundedIcon from "@mui/icons-material/DeleteForeverRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
+import DataContext from "../context/data/dataContext";
 
 function Chatbox() {
+  const params = useParams();
+  const {id} = params;
+  const {convData}=useContext(DataContext);
+  const {conversation} = convData[id];
+
+
+
   return (
     <div className="bg-secondary-bg flex-[0.7] flex flex-col gap-[20px] px-6 py-4">
       <div className="bg-tertiary-bg py-6 px-8 rounded-[20px] flex justify-between items-center text-text-secondary">
@@ -11,7 +20,33 @@ function Chatbox() {
       <DeleteForeverRoundedIcon className="cursor-pointer hover:scale-[1.2] transition-transform duration-300 hover:text-accent-red" />
         
       </div>
-      <div className=" bg-tertiary-bg flex-1 rounded-[20px] py-6 px-4"></div>
+      <div className=" bg-tertiary-bg flex-1 rounded-[20px] py-2 px-4 flex flex-col gap-3 overflow-x-scroll">
+      {/* adding styles */}
+      
+      {conversation.reverse().map((dialouge,index)=>{
+
+                    if(dialouge.sender === false){
+                      return (
+                       
+                        <div className="self-end bg-primary-bg p-2 rounded-tl-[10px] rounded-tr-[10px] rounded-bl-[10px] max-w-[80%]" key={index}>
+                          <h3 className="font-fira text-text-primary">{dialouge.message}</h3>
+                        </div>
+                        
+                      )}
+
+                      else return(
+                        <div className="self-start bg-secondary-bg p-2 rounded-tl-[10px] rounded-tr-[10px] rounded-br-[10px] max-w-[80%]" key={index}>
+                          <h3 className="font-fira text-text-primary">{dialouge.message}</h3>
+                        </div>
+                      )
+
+
+      })}
+      
+      
+      
+
+      </div>
       <div className="flex items-center bg-transparent">
       <input className="w-[92%] py-6 px-4 bg-tertiary-bg text-text-primary rounded-[20px] text-[20px]" />
       <div className="mx-auto bg-tertiary-bg text-text-secondary rounded-full text-center p-5 hover:scale-[1.1] duration-300 hover:text-accent-green ">
