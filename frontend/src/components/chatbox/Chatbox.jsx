@@ -1,15 +1,49 @@
-import React,{useContext} from "react";
+import React,{useContext, useState, useEffect} from "react";
 import { useParams } from "react-router-dom";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import DeleteForeverRoundedIcon from "@mui/icons-material/DeleteForeverRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import DataContext from "../context/data/dataContext";
+//socket io implementation
+import io from "socket.io-client"
+
+const socket = io.connect("http://localhost:3000");
 
 function Chatbox() {
   const params = useParams();
   const {id} = params;
-  const {convData}=useContext(DataContext);
+  const {convData, setConvoData}=useContext(DataContext);
   const {conversation} = convData[id];
+
+  const [message, setMessage] =useState("");
+
+  
+
+
+
+  const sendMessage =(message)=>{
+    socket.emit("send_message", {id, message});
+    setMessage("");
+
+  }
+
+
+  const joinUser =( )=>{
+    if(id !==""){
+      socket.emit("connectTo" , id)
+    }
+  }
+
+
+useEffect(()=>{
+  joinUser();
+  socket.on("received_message", (data)=> {
+    alert(data.message);
+    setConvoData(convData.id.conversation.push({sender:false, message: data.message}));
+    console.log(convData)
+  });
+  
+},[socket, convData])
 
 
 
@@ -48,9 +82,16 @@ function Chatbox() {
 
       </div>
       <div className="flex items-center bg-transparent">
-      <input className="w-[92%] py-6 px-4 bg-tertiary-bg text-text-primary rounded-[20px] text-[20px]" />
-      <div className="mx-auto bg-tertiary-bg text-text-secondary rounded-full text-center p-5 hover:scale-[1.1] duration-300 hover:text-accent-green ">
-      <SendRoundedIcon className="!text-[30px] cursor-pointer translate-x-[3px] hover:scale-[1.5] duration-300 " />
+      <input
+      value={message}
+      onChange={(e)=>{setMessage(e.target.value)}}
+      className="w-[92%] py-6 px-4 bg-tertiary-bg text-text-primary rounded-[20px] text-[20px]" />
+      <div 
+      
+      className="mx-auto cursor-pointer bg-tertiary-bg text-text-secondary rounded-full text-center p-5 hover:scale-[1.1] duration-300 hover:text-accent-green ">
+      <SendRoundedIcon
+      onClick={()=>{sendMessage(message)}}
+      className="!text-[30px] cursor-pointer translate-x-[3px] hover:scale-[1.5] duration-300 " />
       </div>
       </div>
     </div>
