@@ -1,5 +1,5 @@
 import express from 'express'
-
+import cookieParser from 'cookie-parser';
 //db embed
 import mongoose from 'mongoose'
 import connectToDatabase from './config/config.js'
@@ -14,42 +14,46 @@ dotenv.config();
 import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import { error, log } from 'console';
+import jwtAuth from './utils/jwtAuth.js';
+
 
 const app = express();
+
 const server = http.createServer(app);
+
 app.use(express.json());
 app.use(cors());
+app.use(cookieParser());
 
 
-// const io = new Server(server, 
-//     {cors:{
-//         origin: "http://localhost:5173",
-//         methods:["GET", "POST"]
-//     }});
+const io = new Server(server, 
+    {cors:{
+        origin: "http://localhost:5173",
+        methods:["GET", "POST"]
+    }});
 
 
 
 
 
 //scoket io code
-// io.on("connection", (socket)=>{
+io.on("connection", (socket)=>{
     
 
-//      socket.on("connectTo", (data)=>{
-//         socket.join(data);
-//         console.log(data)
-//      });
-//      socket.on("send_message", (data)=>{
-//         socket.to(data.id).emit("received_message", data);
-//         console.log(data.message)
-//      })
+     socket.on("connectTo", (data)=>{
+        socket.join(data);
+        console.log(data)
+     });
+     socket.on("send_message", (data)=>{
+        socket.to(data.id).emit("received_message", data);
+        console.log(data.message)
+     })
      
     
      
 
      
-// })
+})
 
 //enviromental variables
 
@@ -98,11 +102,10 @@ app.post('/sign-up', async (req, res) => {
 });
 
 app.post('/', async(req,res)=>{
+
     const {user, password} =req.body;
     console.log(req.body);
     try {
-
-
         if (Object.keys(req.body).length==0 && !user || !password) return res
         .status(400)
         .json({error:true, message:"fill userId and Password"});
@@ -118,6 +121,7 @@ app.post('/', async(req,res)=>{
                 .json({error:true, message: "wrong password"})
             }
             else if(password === existingUser.password){
+                jwtAuth(user, res)
                 return res
                 .status(200)
                 .json({error:false, message:"data matched"})
