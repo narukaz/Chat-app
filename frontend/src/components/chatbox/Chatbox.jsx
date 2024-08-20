@@ -7,7 +7,7 @@ import DataContext from "../context/data/dataContext";
 //socket io implementation
 import io from "socket.io-client"
 
-const socket = io.connect("http://localhost:3000");
+// const socket = io.connect("http://localhost:3000");
 
 function Chatbox() {
   const params = useParams();
@@ -21,29 +21,29 @@ function Chatbox() {
 
 
 
-  const sendMessage =(message)=>{
-    socket.emit("send_message", {id, message});
-    setMessage("");
+//   const sendMessage =(message)=>{
+//     socket.emit("send_message", {id, message});
+//     setMessage("");
 
-  }
-
-
-  const joinUser =( )=>{
-    if(id !==""){
-      socket.emit("connectTo" , id)
-    }
-  }
+//   }
 
 
-useEffect(()=>{
-  joinUser();
-  socket.on("received_message", (data)=> {
-    alert(data.message);
-    setConvoData(convData.id.conversation.push({sender:false, message: data.message}));
-    console.log(convData)
-  });
+//   const joinUser =( )=>{
+//     if(id !==""){
+//       socket.emit("connectTo" , id)
+//     }
+//   }
+
+
+// useEffect(()=>{
+//   joinUser();
+//   socket.on("received_message", (data)=> {
+//     alert(data.message);
+//     setConvoData(convData.id.conversation.push({sender:false, message: data.message}));
+//     console.log(convData)
+//   });
   
-},[socket, convData])
+// },[socket, convData])
 
 
 

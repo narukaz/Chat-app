@@ -2,6 +2,7 @@ import React, {useState, useRef, useContext} from "react";
 import Inputs from "../inputs/Inputs";
 import {Link, useNavigate} from 'react-router-dom'
 import DataContext from "../context/data/dataContext";
+import api from "../../axios/api";
 
 function Signin() {
   const [enter, setEnter] = useState(false);
@@ -30,8 +31,20 @@ function Signin() {
         return setError("input password");
       } else if (password) {
 
+        try {
+          api.post('/', {user:userId, password})
+          .then((res)=>{
+            if (res?.data?.error === false){
+                setError('');
+                console.log(res.data.message);
+                return navigate('home');
+            }
+            else (setError(res.data.message));
+          })
+        } catch (error) {
+          setError("internal server error")
+        }
         
-        navigate('home')
       }}
     //api call, send user data ahead using axios
     };
