@@ -32,16 +32,18 @@ function Signin() {
       } else if (password) {
 
         try {
-          api.post('/', {user:userId, password})
+          api.post('/', {email:userId, password},)
           .then((res)=>{
             if (res?.data?.error === false){
                 setError('');
                 console.log(res.data.message);
+                localStorage.setItem("token", res.data.token)
                 return navigate('home');
             }
             else (setError(res.data.message));
           })
         } catch (error) {
+          console.log(error.message)
           setError("internal server error")
         }
         
