@@ -11,7 +11,7 @@ function Signin() {
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
-  const {setLogId} = useContext(DataContext);
+  const {setUser} = useContext(DataContext);
 
   const handleKeyDownID = (event) => {
     if (event.key === "Enter") {
@@ -32,15 +32,20 @@ function Signin() {
       } else if (password) {
 
         try {
+          api.defaults.withCredentials=true;
+
           api.post('/', {email:userId, password},)
           .then((res)=>{
+
+            
             if (res?.data?.error === false){
                 setError('');
                 console.log(res.data.message);
-                localStorage.setItem("token", res.data.token)
-                return navigate('home');
+                // localStorage.setItem("token", res.data.token);
+                setUser(res.data.userInfo.user);
+                return navigate(res.data.navigate);
             }
-            else (setError(res.data.message));
+            else (setError(res.data.userInfo.message));
           })
         } catch (error) {
           console.log(error.message)

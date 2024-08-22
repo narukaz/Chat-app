@@ -17,9 +17,10 @@ const DataContextProvider =({children})=>{
         pinky:{conversation:[], lastSeen:"12pm"},
         sandeep:{conversation:[], lastSeen:"12pm"}});
         
-        const [LogId, setLogId] = useState(null);
+        const [user, setUser] = useState(null);
+        const [chatId, setChatId] = useState(null);
         return (
-            <DataContext.Provider value={{convData, setConvData, LogId, setLogId}}>
+            <DataContext.Provider value={{convData, setConvData, user, setUser,chatId,setChatId}}>
             {children}
             </DataContext.Provider>
         )

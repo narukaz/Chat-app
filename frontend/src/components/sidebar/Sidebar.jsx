@@ -5,25 +5,12 @@ import AddCircleIcon from '@mui/icons-material/AddCircle';
 import DataContext from '../context/data/dataContext';
 
 function Sidebar() {
-const {convData} = useContext(DataContext);
+const {user,convData} = useContext(DataContext);
 const navigate = useNavigate();
 
 const data = Object.keys(convData);
 
-  // const [conversations, setConversations]= useState([
-  //   // {senderName: 'ramesh',
-  //   //  lastMessage: "where are you",
-  //   //  time: '12pm',
-  //   // },
-  //   // {senderName: 'pinkesh',
-  //   //   lastMessage: "the best music ",
-  //   //   time: '12pm',
-  //   // },
-  //   // {senderName: 'mukesh',
-  //   //   lastMessage: "are you still alive?",
-  //   //   time: '12pm',
-  //   // }
-  // ]);
+
   const showConversation = (name) =>{
           navigate(`chat/${name}`);
   } 
@@ -35,7 +22,7 @@ const data = Object.keys(convData);
   return (
     <div className='bg-primary-bg flex-[0.3] flex flex-col gap-[20px] px-6 py-4'>
     <div className='bg-tertiary-bg py-6 px-4 rounded-[20px] flex justify-between items-center text-text-secondary'>
-        <AccountCircleIcon className='cursor-pointer'/>
+    <label className='font-fira font-bold'><AccountCircleIcon className='cursor-pointer pr-2'/>{user}</label>
         <div><AddCircleIcon className='cursor-pointer' /></div>
         
     </div>

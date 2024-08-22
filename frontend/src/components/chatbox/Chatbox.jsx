@@ -7,12 +7,13 @@ import DataContext from "../context/data/dataContext";
 //socket io implementation
 import io from "socket.io-client"
 
+
 const socket = io.connect("http://localhost:3000");
 
 function Chatbox() {
   const params = useParams();
   const {id} = params;
-  const {convData, setConvoData}=useContext(DataContext);
+  const {convData, setConvoData, chatId, setChatId}=useContext(DataContext);
   const {conversation} = convData[id];
 
   const [message, setMessage] =useState("");
@@ -35,8 +36,6 @@ useEffect(()=>{
   joinUser();
   socket.on("received_message", (data)=> {
     alert(data.message);
-    setConvoData(convData.id.conversation.push({sender:false, message: data.message}));
-    console.log(convData)
   });
   
 },[socket, convData])
@@ -46,7 +45,9 @@ useEffect(()=>{
   return (
     <div className="bg-secondary-bg flex-[0.7] flex flex-col gap-[20px] px-6 py-4">
       <div className="bg-tertiary-bg py-6 px-8 rounded-[20px] flex justify-between items-center text-text-secondary">
-      <AccountCircleIcon className="cursor-pointer hover:scale-[1.2] transition-transform duration-300 hover:text-accent-blue  " />
+        <label className="font-fira font-bold">
+      <AccountCircleIcon className="mr-2 cursor-pointer hover:scale-[1.2] transition-transform duration-300 hover:text-accent-blue  " />
+      {id}</label>
       <DeleteForeverRoundedIcon className="cursor-pointer hover:scale-[1.2] transition-transform duration-300 hover:text-accent-red" />
         
       </div>
