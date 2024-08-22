@@ -1,5 +1,6 @@
 // userModal.js
 import mongoose from 'mongoose';
+import uniqueId from '../utils/uniqueId.js';
 
 const userSchema = new mongoose.Schema({
     user: {
@@ -14,6 +15,12 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
         required: true
+    },
+    chatId:{
+        type:String,
+        default:uniqueId,
+        unique:true
+
     },
     visible:{
         type: Boolean,
