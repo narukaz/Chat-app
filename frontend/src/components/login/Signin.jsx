@@ -5,13 +5,15 @@ import DataContext from "../context/data/dataContext";
 import api from "../../axios/api";
 
 function Signin() {
+
+
   const [enter, setEnter] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   const navigate = useNavigate();
-  const { setUser } = useContext(DataContext);
+  const { setUserInfo } = useContext(DataContext);
 
   const handleKeyDownID = (event) => {
     if (event.key === "Enter") {
@@ -24,31 +26,28 @@ function Signin() {
     }
   };
 
-  const handleKeyDownPassword = (event) => {
+  const handleKeyDownPassword = async (event) => {
     if (event.key === "Enter") {
       if (!email) return setError("input id or username");
       if (!password) {
         return setError("input password");
       } else if (password) {
-        try {
-          api.defaults.withCredentials = true;
-
-          api.post("/", { email, password }).then((res) => {
-            if (res?.data?.error === false) {
-              setError("");
-              console.log(res.data.message);
-              // localStorage.setItem("token", res.data.token);
-              setUser(res.data.userInfo.user);
-              return navigate(res.data.navigate);
-            } else setError(res.data.userInfo.message);
+        api.defaults.withCredentials = true;
+         await api.post("/", { email, password })
+          .then((res) => {
+            console.log(res.data)
+            setError("");
+            setUserInfo(res.data?.userInfo);
+            navigate(res.data.navigate);
+          })
+          .catch((err) => {
+            console.log(err.message)
+            const errorMessage =
+            err.response.data?.message || "unexpected error has occured";
+            setError(errorMessage);
           });
-        } catch (error) {
-          console.log(error.message);
-          setError("internal server error");
-        }
       }
     }
-    //api call, send user data ahead using axios
   };
 
   return (

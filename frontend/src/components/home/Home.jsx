@@ -1,15 +1,21 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useContext } from 'react'
 import Sidebar from '../sidebar/Sidebar'
 import { Outlet , useNavigate} from 'react-router-dom'
+import DataContext from '../context/data/dataContext'
 import api from '../../axios/api'
 
 function Home() {
-  const navigate =useNavigate();
-  const secureLog = () => {
+  const navigate = useNavigate();
+ const {userInfo, setUserInfo , contacts, setContacts}= useContext(DataContext);
+
+
+  const secureLog = async() => {
     api.defaults.withCredentials=true;
-    api.post("/home")
+    await api.post("/home",)
     .then(res=> {
-      console.log("you are at /home")
+        setUserInfo(res.data?.userInfo)
+        setContacts(res.data?.contacts || [])
+        
       })
       
     .catch(err=>  {
@@ -17,10 +23,12 @@ function Home() {
     }
     
 
-
+    
 
   useEffect(()=>{
+    
     secureLog();
+    console.log("userinfo in home" + userInfo,contacts);
   },[])
 
 

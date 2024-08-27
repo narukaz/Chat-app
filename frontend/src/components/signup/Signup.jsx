@@ -5,7 +5,7 @@ import api from "../../axios/api";
 
 function Signup() {
   const [enter, setEnter] = useState(false);
-  const [userId, setUserId] = useState("");
+  const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -27,10 +27,10 @@ function Signup() {
 
   const handleKeyDownPassword = (event) => {
     if (event.key === "Enter") {
-      if (!userId || !email || !password) return setError("input id or username")
+      if (!userName || !email || !password) return setError("input id or username")
       else{
     
-      api.post('/sign-up',{user:userId, email,password}).then((res)=> {
+      api.post('/sign-up',{userName,email,password}).then((res)=> {
       if(res.data.error === false) {
         console.log(res.data)
         navigate('/')}
@@ -48,8 +48,8 @@ function Signup() {
       <div className="p-2 flex flex-col gap-[20px]">
         <Inputs
           handleKeyDown={handleKeyDownID}
-          value={userId}
-          setValue={setUserId}
+          value={userName}
+          setValue={setUserName}
           inputType="text"
           placeholder="email or username"
         />
