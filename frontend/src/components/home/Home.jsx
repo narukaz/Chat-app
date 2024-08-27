@@ -9,11 +9,12 @@ function Home() {
     api.defaults.withCredentials=true;
     api.post("/home")
     .then(res=> {
-      if(res.data.redirect) return navigate(res.data.redirect)})
+      console.log("you are at /home")
+      })
       
     .catch(err=>  {
-      console.log(err)
-      return navigate(err?.response?.data?.redirect) })}
+      return navigate(err?.response?.data?.redirect) })
+    }
     
 
 

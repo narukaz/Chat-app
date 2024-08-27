@@ -14,6 +14,7 @@ import { Server } from "socket.io";
 import cors from "cors";
 import { signToken} from "./utils/jwtAuth.js";
 import { authenticateToken } from "./middleware/authMiddleware.js";
+import { error } from "console";
 
 const app = express();
 
@@ -85,8 +86,9 @@ app.post("/sign-up", async (req, res) => {
 
     // Create new user and save to database
     const newUser = new User({ user, email, password });
-    await newUser.save(); // Fix: Call save() method
-
+    await newUser.save(); //Call save() method
+    console.log("new user added: "+ newUser);
+    
     return res
       .status(201)
       .json({ error: false, message: "User registered successfully." });
@@ -151,6 +153,17 @@ app.post("/home", authenticateToken, (req, res) => {
   return res.status(200).json({
     error: false,
     message: "fetched",
-    redirect: null,
   });
 });
+
+app.post("/chat/:id", authenticateToken, (req,res)=>{
+        const requestedUser = req.params.id;
+        const user = req.user.email;
+
+        return res.status(200).json({
+            error:false,
+            message: "fetched",
+            requestedData:{"name":requestedUser, conversation: []}
+
+        })
+})

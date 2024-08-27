@@ -1,22 +1,52 @@
-import React,{useContext, useState, useEffect} from "react";
-import { useParams } from "react-router-dom";
+import React,{useContext, useState, useEffect, } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import DeleteForeverRoundedIcon from "@mui/icons-material/DeleteForeverRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import DataContext from "../context/data/dataContext";
 //socket io implementation
 import io from "socket.io-client"
+import api from "../../axios/api";
 
 
 const socket = io.connect("http://localhost:3000");
 
 function Chatbox() {
+  
+  const [talkingTo, SetTalkingTo] = useState("");
+  const navigate = useNavigate();
   const params = useParams();
   const {id} = params;
   const {convData, setConvoData, chatId, setChatId}=useContext(DataContext);
   const {conversation} = convData[id];
-
   const [message, setMessage] =useState("");
+
+
+  const secureLog = () => {
+    api.defaults.withCredentials=true;
+    api.post(`/chat:${id}`)
+    .then(res => {
+      console.log(`id: ${id}'s data`);
+      setConvoData(res.data.conversation)
+      SetTalkingTo(res.data.requestedData.name)
+      console.log(res.data.requestedData);
+
+      })
+      
+    .catch(err=>  {
+      return navigate(err?.response?.data?.redirect) })
+    }
+    
+
+
+
+  useEffect(()=>{
+    secureLog();
+  },[params])
+
+
+
+
 
   const sendMessage =(message)=>{
     socket.emit("send_message", {id, message});
@@ -33,12 +63,11 @@ function Chatbox() {
 
 
 useEffect(()=>{
+  secureLog();
   joinUser();
   socket.on("received_message", (data)=> {
-    alert(data.message);
-  });
-  
-},[socket, convData])
+    alert(data.message)
+  })},[socket, convData])
 
 
 
@@ -47,7 +76,7 @@ useEffect(()=>{
       <div className="bg-tertiary-bg py-6 px-8 rounded-[20px] flex justify-between items-center text-text-secondary">
         <label className="font-fira font-bold">
       <AccountCircleIcon className="mr-2 cursor-pointer hover:scale-[1.2] transition-transform duration-300 hover:text-accent-blue  " />
-      {id}</label>
+      {talkingTo}</label>
       <DeleteForeverRoundedIcon className="cursor-pointer hover:scale-[1.2] transition-transform duration-300 hover:text-accent-red" />
         
       </div>

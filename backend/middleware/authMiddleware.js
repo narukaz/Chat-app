@@ -5,7 +5,7 @@ export const authenticateToken = (req, res, next) => {
     const token = req.cookies.token;
 
     if (!token) {
-        return res.status(401).json({ error: true, message: "re-login no token found", redirect: '/' });
+        return res.status(401).json({ error: true, message: "re-Login no token found", redirect: '/' });
     }
 
     // Verify the token
@@ -15,7 +15,7 @@ export const authenticateToken = (req, res, next) => {
         }
 
         // Attach user info to request object
-        req.user = decoded?.email; // Ensure decoded exists and has an email
+        req.user = {decoded}; // Ensure decoded exists and has an email
 
         // Proceed to the next middleware or route handler
         next();
