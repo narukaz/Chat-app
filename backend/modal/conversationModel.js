@@ -1,11 +1,19 @@
 import mongoose from "mongoose";
-import User from "./userModal";
+import User from "./userModel.js";
+
+
+
 
 const conversationSchema = new mongoose.Schema({
-    user:{
-        type:String,
-        unique:true,
-        required:true,
-        ref:User
-    }
-})
+       
+        participants:[{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User"
+        }],
+        message:[{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Message"}],
+            
+        });
+
+export const Chat = mongoose.model("Chat", conversationSchema);

@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import uniqueId from '../utils/uniqueId.js';
 
 const userSchema = new mongoose.Schema({
-    user: {
+    userName: {
         type: String,
         required: true
     },
