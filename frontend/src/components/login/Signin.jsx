@@ -36,9 +36,9 @@ function Signin() {
          await api.post("/", { email, password })
           .then((res) => {
             console.log(res.data)
-            setError("");
-            setUserInfo(res.data?.userInfo);
-            navigate(res.data.navigate);
+            setError("")
+            setUserInfo(res.data?.userInfo)
+            navigate(res.data.navigate)
           })
           .catch((err) => {
             console.log(err.message)

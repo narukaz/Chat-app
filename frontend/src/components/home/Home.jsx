@@ -11,14 +11,15 @@ function Home() {
 
   const secureLog = async() => {
     api.defaults.withCredentials=true;
-    await api.post("/home",)
+    await api.post("/home")
     .then(res=> {
         setUserInfo(res.data?.userInfo)
         setContacts(res.data?.contacts || [])
         
       })
       
-    .catch(err=>  {
+    .catch((err)=>  {
+      console.log(err)
       return navigate(err?.response?.data?.redirect) })
     }
     
@@ -26,9 +27,8 @@ function Home() {
     
 
   useEffect(()=>{
-    
-    secureLog();
-    console.log("userinfo in home" + userInfo,contacts);
+  secureLog();
+    // console.log("userinfo in home" + userInfo,contacts);
   },[])
 
 

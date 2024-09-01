@@ -6,13 +6,9 @@ import Home from './components/home/Home';
 import Chatbox from './components/chatbox/chatbox';
 import Welcome from './components/welcome/Welcome';
 import Signup from './components/signup/Signup';
-import DataContext from './components/context/data/dataContext';
 import DataContextProvider from './components/context/data/DataContextProvider';
 
 function App() {
-
-  
-
   return (
     <DataContextProvider>
 
