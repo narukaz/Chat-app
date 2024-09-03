@@ -20,6 +20,7 @@ import { signToken } from "./utils/jwtAuth.js";
 import { authenticateToken } from "./middleware/authMiddleware.js";
 import { userInfo } from "os";
 import { error } from "console";
+import { measureMemory } from "vm";
 
 const app = express();
 
@@ -79,7 +80,7 @@ io.on("connection", async (socket) => {
           { $addToSet: { contacts: data.receiver } },
           { new: true }
         );
-        console.log(saveContact);
+        // console.log(saveContact);
       })();
 
       const newMessage = await Message.create({ ...data }); //creating the new message
@@ -90,14 +91,14 @@ io.on("connection", async (socket) => {
         { new: true }
       );
 
-      console.log("updated chat: " + chat); //
+      // console.log("updated chat: " + chat); //
 
       if (chat == null) {
         const newChat = await Chat.create({
           participants: [data.sender, data.receiver],
           message: [newMessage._id],
         });
-        console.log(newChat);
+        // console.log(newChat);
       }
 
       socket.to(socketID.socketID).emit("messageFromServer", data);
@@ -216,7 +217,7 @@ app.post("/", async (req, res) => {
 
 app.post("/home", authenticateToken, async (req, res) => {
     const {_id} =  req.user;
-    console.log(_id)
+    // console.log(_id)
     //handling the preview data 
     try {
       const findContacts = await Chat.find({participants:_id}).select("participants -_id")
@@ -229,14 +230,13 @@ app.post("/home", authenticateToken, async (req, res) => {
                   data.push(findID)
                 }
             }
+            
             return acc.concat(data)
       },[]) ;
-      console.log(contacts)
 
       contacts  = await User.find({_id:{$in:contacts}}).select('userName')
       
-
-      console.log(contacts)
+     
       return res.status(200).json({
         error: false,
         message: "Contacts fetched successfully",
@@ -258,7 +258,7 @@ app.post("/chat/:id", authenticateToken, async (req, res) => {
   try {
     
     let talkingTo = await User.findById(receiverID);
-    console.log(talkingTo);
+    // console.log(talkingTo);
 
     const conversation = await Chat.findOne({participants:{$all:[_id,receiverID]}}).populate({
       path:'message',
@@ -435,3 +435,31 @@ app.put("/dummy", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+
+//get AddfriendUSer
+app.post('/addFriend', authenticateToken, async(req, res)=>{
+  
+  try {
+    const {email} = req.body;
+    console.log(req.body)
+  const user = await User.findOne({email}).select('userName')
+  console.log(user)
+
+  if(user == null) {return res.status(200).json({error:true, message:"no user found"})}
+
+  else{
+
+      const chat = await Chat.create(
+      {
+        participants:[user._id, req.user._id],
+        message:[]
+      }
+    )
+      return res.status(200).json({error:true, message:"user found" , user})
+  }
+    
+  } catch (error) {
+    return res.status(500).json({error:true,  message:"server error"})
+  }
+})
