@@ -1,15 +1,22 @@
-import React,{useContext} from 'react'
+import React,{useContext, useEffect, useRef} from 'react'
 import DataContext from "../context/data/dataContext";
 
-function ChatViewer({conversation}) {
+function ChatViewer({conversation, scrollToEnd}) {
 
     const {userInfo}=useContext(DataContext);
+    
 
 
+
+
+
+
+    useEffect(()=>{
+    }, [conversation])
 
 
   return (
-    <div className=" bg-tertiary-bg flex-1 rounded-[20px] py-2 px-4 flex flex-col gap-3 overflow-x-scroll">
+    <div className=" bg-tertiary-bg flex-1 rounded-[20px] py-2 px-4 flex flex-col gap-3 overflow-x-scroll" ref={scrollToEnd}>
     {/* adding styles */}
     
     {conversation.map((dialouge,index)=>{
@@ -28,13 +35,7 @@ function ChatViewer({conversation}) {
                         <h3 className="font-fira text-text-primary">{dialouge.message}</h3>
                       </div>
                     )
-
-
     })}
-    
-    
-    
-
     </div>
   )
 }

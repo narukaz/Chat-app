@@ -1,4 +1,4 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext, useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import DataContext from "../context/data/dataContext";
@@ -21,7 +21,7 @@ function Chatbox() {
   const navigate = useNavigate();
   const [talkingTo, setTalkingTo] = useState("");
   const { id } = useParams();
-  const {userInfo, setUserInfo, setContacts } =
+  const {userInfo, setUserInfo, setContacts} =
   useContext(DataContext);
   const [message, setMessage] = useState("");
   const [conversation, setConversation] = useState([]);
@@ -65,7 +65,12 @@ function Chatbox() {
   };
 
   // sending message to server
-  
+  const scrollToEnd = useRef(null);
+    const handleScroll = ()=>{
+      scrollToEnd.current?.scrollIntoView({ behavior: 'smooth',
+        block: 'end',
+        inline: 'nearest' });
+    }
 
 
 
@@ -90,6 +95,7 @@ function Chatbox() {
     socket.on("messageFromServer", (data) => {
       setConversation((prevData) => [...prevData, data]);
       setMessage("");
+      handleScroll()
     });
   }, [socket]);
 
@@ -98,7 +104,7 @@ function Chatbox() {
 
   useEffect(() => {
     secureLog();
-  }, []);
+  }, [id]);
 
   return (
     <div className="bg-secondary-bg flex-[0.7] flex flex-col gap-[20px] px-6 py-4">
@@ -106,7 +112,7 @@ function Chatbox() {
         talkingTo={talkingTo}
         onDeleteConversation={onDeleteConversation}
       />
-      <ChatViewer conversation={conversation} />
+      <ChatViewer conversation={conversation} scrollToEnd={scrollToEnd} />
       <div className="flex items-center bg-transparent">
         <input
           value={message}
