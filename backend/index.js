@@ -18,9 +18,6 @@ import { Server } from "socket.io";
 import cors from "cors";
 import { signToken } from "./utils/jwtAuth.js";
 import { authenticateToken } from "./middleware/authMiddleware.js";
-import { userInfo } from "os";
-import { error } from "console";
-import { measureMemory } from "vm";
 
 const app = express();
 
@@ -33,6 +30,7 @@ app.use(
     credentials: true,
   })
 );
+
 app.use(cookies());
 // app.use(authenticateToken);
 
@@ -44,68 +42,40 @@ const io = new Server(server, {
   },
 });
 //scoket io code
+
 io.on("connection", async (socket) => {
-  // console.log("a user connected: " + io.sockets.size);
-  
-  //handling handashake
-  if (socket.handshake.auth != null) {
-    const saveSocketId = await User.findOneAndUpdate(
-      { _id: socket.handshake.auth.userID },
-      { socketID: socket.id },
-      { new: true }
-    );
-    // console.log(saveSocketId);
-  }
 
-  socket.on("messageFromClient", async (data) => {
-    //writing mongoDB code.
-    const socketID = await User.findById(data.receiver);
+  console.log("userConnected: ", socket.id)
 
-    try {
-      //code to handle contacts
-      //writing an iife
-      (async function () {
-        const contacts = await Contacts.find({ userID: data.sender });
-        if (contacts == null) {
-          //creating new contact
-          await Contacts.create({
-            userID: data.sender,
-            contacts: [data.receiver],
-          });
-        }
+  //checking auth and updating socket
+      console.log("auth log,",socket?.handshake?.auth)
 
-        //updating the array
-        const saveContact = await Contacts.findOneAndUpdate(
-          { userID: data.sender },
-          { $addToSet: { contacts: data.receiver } },
-          { new: true }
-        );
-        // console.log(saveContact);
-      })();
 
-      const newMessage = await Message.create({ ...data }); //creating the new message
-      // console.log(newMessage);
-      const chat = await Chat.findOneAndUpdate(
-        { participants: { $all: [data.sender, data.receiver] } },
-        { $addToSet: { message: newMessage._id } },
-        { new: true }
-      );
+    if (socket?.handshake?.auth?.userID !== null) {
 
-      // console.log("updated chat: " + chat); //
+      console.log("updating socket for ", socket.handshake.auth.userID)
 
-      if (chat == null) {
-        const newChat = await Chat.create({
-          participants: [data.sender, data.receiver],
-          message: [newMessage._id],
-        });
-        // console.log(newChat);
-      }
-
-      socket.to(socketID.socketID).emit("messageFromServer", data);
+      try { // console.log('userID from auth:', socket.handshake.auth.userID)
+      let user = await User.findByIdAndUpdate(socket.handshake.auth.userID,{socketID: socket.id,},{ new: true })
+      console.log(user)
     } catch (error) {
-      console.log(error.message);
+      console.log("connection event: ",error.message)
     }
-  });
+    } //end
+  
+  
+    socket.on("messageFromClient", async(data) => {//message from client
+      try {
+        let messageFromServer = {...data, sender:socket?.handshake?.auth?.userID}
+        let receiverInfo = await User.findById(data.receiver).select("socketID")
+        console.log(receiverInfo)
+        if(receiverInfo){ 
+        socket.to(receiverInfo.socketID).emit("messageFromServer", messageFromServer);
+        }
+      } catch (error) {
+        console.log(error.message)
+      }
+      })
 
   socket.on("disconnect", () => {
     console.log("a user disconnected:" + socket.id);
@@ -113,7 +83,6 @@ io.on("connection", async (socket) => {
 });
 
 //enviromental variables
-
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log("server is up");
@@ -216,250 +185,156 @@ app.post("/", async (req, res) => {
 });
 
 app.post("/home", authenticateToken, async (req, res) => {
-    const {_id} =  req.user;
-    // console.log(_id)
-    //handling the preview data 
-    try {
-      const findContacts = await Chat.find({participants:_id}).select("participants -_id")
-
-      //using reduce to store everything in a single array
-      let contacts = findContacts.reduce((acc, item)=>{
-            let data = [];
-            for(const findID of item.participants){
-                if(findID != _id){
-                  data.push(findID)
-                }
-            }
-            
-            return acc.concat(data)
-      },[]) ;
-
-      contacts  = await User.find({_id:{$in:contacts}}).select('userName')
-      
-     
-      return res.status(200).json({
-        error: false,
-        message: "Contacts fetched successfully",
-        contacts,
-        userInfo: {...req.user}
-        
-      })
-    } catch (error) {
-      return res.status(500).json({error:true, message:"internal server error"})
-    }
-
-
-
+  try {
+    const { _id, userName } = req.user;
+    return res.status(200).json({
+      error: false,
+      message: "Contacts fetched successfully",
+      userInfo: { _id, userName },
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ error: true, message: "internal server error /HOME" });
+  }
 });
 
 app.post("/chat/:id", authenticateToken, async (req, res) => {
   const { _id, userName, email } = req.user;
   let receiverID = req.params.id;
   try {
-    
-    let talkingTo = await User.findById(receiverID);
-    // console.log(talkingTo);
+    let talkingTo = await User.findById(receiverID).select("userName"); //fetch whom  user is talking to
+    console.log(talkingTo);
 
-    const conversation = await Chat.findOne({participants:{$all:[_id,receiverID]}}).populate({
-      path:'message',
-      select:'-_id -__v'
+    let { message: messages } = await Chat.findOne({
+      participants: { $all: [_id, receiverID] },
+    }).populate({
+      //fetch if there is any chats prior
+      path: "message",
     });
 
-    console.log(conversation);
-    
-      if(conversation == null) 
-      {conversation = []}
-    return res
-      .status(200)
-      .json({error:false , message:"successfully fetched",userInfo: { ...req.user }, talkingTo: talkingTo.userName, conversation: conversation?.message||[] });
-
-
-  } catch (error) {
-    return res
-      .status(200)
-      .json({ error:true,  message: "Error fetching conversation" });
-
-  }
-  
-  //finding the receiver
-
-  // try {
-
-  //   let data = await Chat.findOne({_id, receiverID}).populate('messages'); //checking if chat exists-1
-
-  //   if(data == null){  ///creating new object if not available
-  //     let data = await Chat.create({
-  //       participants:[_id, receiverID],
-  //       messages:[]
-  //     })
-
-  //     if(data){ //returning if got created
-  //       return res.status(200).json({error:false, message:'fetch or added - success!', messages : [] , userInfo:{...req.user}, talkingTo :talkingTo||"No such user"})
-  //     }
-  //   }
-  //   else{ //returning if found
-  //     return res.status(200).json({error:false, message:'fetch or added - success!',messages : data.message, userInfo:{...req.user},talkingTo :talkingTo||"No such user"})
-  //   }
-
-  // } catch (error) {
-  //   console.log(error.message)
-  //   return res
-  //     .status(500)
-  //     .json({ error: true, message: "internal server error" });
-  // }
-});
-
-app.post("/sendMessage/:id", authenticateToken, async (req, res) => {
-  ß;
-
-  const { _id } = req.user;
-  const { message } = req.body;
-  const receiverID = req.params.id;
-  console.log(receiverID);
-  const talkingTo = await User.findById(receiverID).populate("userName");
-
-  return res
-    .status(200)
-    .json({ userInfo: { ...req.user }, talkingTo: talkingTo.userName });
-  //
-  // my contact logic start
-  // let contactDoc = await  Contacts.findOneAndUpdate({ userID: _id },{$addToSet:{contacts:receiverID}},{new:true}).populate({path:'contacts' ,select:"userName  _id"});
-  // console.log("findbyandUpdate" + contactDoc);
-  // try {
-  //   if(contactDoc == null){
-  //      contactDoc = await Contacts.create({
-  //       userID: _id,
-  //       contacts: [receiverID]
-  //     }) //end of creation
-  //     console.log("creationg :" + contactDoc)
-  //     //populating creation
-  //     contactDoc = await contactDoc.populate('contacts');
-  //     console.log("created:" + contactDoc)
-  //   }//close
-
-  //   let newMessage =  await Message.create({
-  //     sender:_id,
-  //     receiver:receiverID,
-  //     message:message
-  //   })
-
-  //   let conversation = await Chat.findOneAndUpdate({participants:{$all:[_id,receiverID]}}, {$addToSet:{message:newMessage._id}})
-  //   await conversation.populate('message')
-  //   console.log(conversation);
-
-  //   //returning final result
-  //   return res.status(200).json({error:false,message:"success",contacts:contactDoc.contacts , userInfo:{...req.body}, talkingTo :talkingTo||"No such user" , messages:conversation.message});
-
-  // } catch (error) {
-  //   console.log(error.message)
-  //     return res.status(500).json({error:true, message:"internal server error"})
-  // }
-});
-
-//inser in the contact and fetch the updated contact
-//create new message
-//save new message
-
-app.delete("/deleteConversation/:id", authenticateToken, async (req, res) => {
-  try {
-    const { id: receiverID } = req.params;
-    const { _id } = req.user;
-    let contactDoc = await Contacts.findOneAndUpdate(
-      { $and: [{ contacts: { $in: [receiverID] } }, { userID: _id }] },
-      { $pull: { contacts: receiverID } },
-      { new: true }
-    ).populate({
-      path: "contacts",
-      select: "userName _id",
-    });
-
-    if (contactDoc == null) {
-      contactDoc = await Contacts.findOne({ userID: _id }).populate({
-        path: "contacts",
-        select: "userName _id",
-      });
-      console.log("was null: " + contactDoc);
-
-      return res
-        .status(200)
-        .json({
-          error: true,
-          message: "chat does not exist",
-          userInfo: { ...req.user },
-          contacts: contactDoc.contacts,
-          redirect: "/home/welcome",
-        });
+    if (messages == null) {
+      messages = [];
     }
-    console.log("updated doc: " + contactDoc);
+
     return res
       .status(200)
       .json({
         error: false,
-        message: "chat deleted successfully",
+        message: "successfully fetched",
         userInfo: { ...req.user },
-        contacts: contactDoc.contacts,
-        redirect: "/home/welcome",
+        talkingTo,
+        messages,
       });
   } catch (error) {
     return res
-      .status(500)
-      .json({ error: true, message: "internal server error" });
+      .status(200)
+      .json({ error: true, message: "Error fetching conversation" });
   }
 });
 
-app.put("/dummy", async (req, res) => {
+app.delete("/deleteConversation/:id", authenticateToken, async (req, res) => {
   try {
-    const { email, newUser } = req.body;
-
-    // Validate request data
-    if (!email || !newUser) {
+    const { id } = req.params;
+    const { _id } = req.user;
+    const conversation = await Chat.findOneAndDelete({
+      participants: { $all: [id, _id] },
+    });
+    const message = await Message.deleteMany({
+      $or: [
+        { sender: _id, receiver: id },
+        { receiver: _id, sender: id },
+      ],
+    });
+    if (conversation == null) {
       return res
         .status(400)
-        .json({ message: "Email and newUsername are required" });
+        .json({ error: false, message: "conversation not found" });
     }
 
-    // Update the username directly in the database
-    const result = await User.updateOne(
-      { email }, // Filter to find the user by email
-      { $set: { user: newUser } } // Update operation
-    );
-
-    if (result.modifiedCount === 0) {
-      return res.status(404).json({
-        message: "User not found or username is the same as the current value",
-      });
-    }
-
-    res.status(200).json({ message: "Username updated successfully" });
+    return res.status(200).json({ error: false, message: "Message deleted" });
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    return console.log(error.message);
   }
 });
 
-
 //get AddfriendUSer
-app.post('/addFriend', authenticateToken, async(req, res)=>{
-  
+app.post("/addFriend", authenticateToken, async (req, res) => {
   try {
-    const {email} = req.body;
-    console.log(req.body)
-  const user = await User.findOne({email}).select('userName')
-  console.log(user)
+    const { email } = req.body;
 
-  if(user == null) {return res.status(200).json({error:true, message:"no user found"})}
+    if (email == req.user.email) {
+      //handling if user inputs personal email instead
+      return res
+        .status(200)
+        .json({
+          error: true,
+          message: "cannot add yourself to the friend list",
+        });
+    }
 
-  else{
-
-      const chat = await Chat.create(
-      {
-        participants:[user._id, req.user._id],
-        message:[]
-      }
-    )
-      return res.status(200).json({error:true, message:"user found" , user})
-  }
-    
+    const user = await User.findOne({ email }).select("userName"); //finding the yser
+    console.log(user);
+    if (user == null) {
+      return res.status(404).json({ error: true, message: "no user found" });
+    } else {
+      const chat = await Chat.create({
+        participants: [user._id, req.user._id],
+        message: [],
+      });
+      return res
+        .status(200)
+        .json({ error: false, message: "user found", user });
+    }
   } catch (error) {
-    return res.status(500).json({error:true,  message:"server error"})
+    return res
+      .status(500)
+      .json({ error: true, message: "server error on /addFriend" });
   }
-})
+});
+
+app.get("/fetchContacts", authenticateToken, async (req, res) => {
+  try {
+    const { _id } = req.user;
+    const findContacts = await Chat.find({ participants: _id }).select(
+      "participants -_id"
+    );
+    //using reduce to store everything in a single array
+    let contacts = findContacts.reduce((acc, item) => {
+      let data = [];
+      for (const findID of item.participants) {
+        if (findID != _id) {
+          data.push(findID);
+        }
+      }
+      return acc.concat(data);
+    }, []);
+
+    if (contacts) {
+      contacts = await User.find({ _id: { $in: contacts } }).select(
+        "userName _id status"
+      );
+    }
+
+    return res.status(200).json({
+      error: false,
+      message: "successfully",
+      contacts: contacts,
+    });
+  } catch (error) {
+    console.log(error.message);
+    return res.status(500).json({
+      error: true,
+      message: "server error on /fetchContacts",
+    });
+  }
+});
+
+app.patch("/updateMessage", authenticateToken, async (req, res) => {
+  try {
+    const { messageID, message } = req.body;
+    const response = await Message.findByIdAndUpdate(messageID, { message });
+    console.log(response);
+    return res.status(200).json({ error: false, message: "api hit" });
+  } catch (err) {}
+});
