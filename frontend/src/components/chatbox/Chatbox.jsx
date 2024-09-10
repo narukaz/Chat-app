@@ -1,135 +1,92 @@
-import React, { useContext, useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import SendRoundedIcon from "@mui/icons-material/SendRounded";
+import React, { useContext, useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import DataContext from "../context/data/dataContext";
 //socket io implementation
-import { io } from "socket.io-client";
-
-
-
-
-
-import api from "../../axios/api";
 import ChatViewer from "./ChatViewer";
 import ChatHeader from "./ChatHeader";
+import Input from "./Input";
+import api from "../../axios/api";
+import { io } from "socket.io-client";
+
+let socket;
 
 function Chatbox() {
-  
-
-
-
-  const navigate = useNavigate();
-  const [talkingTo, setTalkingTo] = useState("");
   const { id } = useParams();
-  const {userInfo, setUserInfo, setContacts} =
-  useContext(DataContext);
-  const [message, setMessage] = useState("");
-  const [conversation, setConversation] = useState([]);
+  const [requestedUser, setRequestedUser] = useState("");
+  const { setMessages, userInfo } = useContext(DataContext); //saved userinfo from context
+  const [isEditMode, setIsEditMode] = useState(false); //edit mode
+  const [message, setMessage] = useState(""); //record messages
 
-
-//socket code
-  const socket = io.connect("http://localhost:3000", {auth:{
-    userID:userInfo._id
-  }});
-
-  const secureLog = async () => {
-    console.log("Chat ID from useParams:", id);
-    api.defaults.withCredentials = true;
-    await api
-      .post(`/chat/${id}`)
-      .then((res) => {
-        setTalkingTo(res.data.talkingTo);
-        setUserInfo(res.data.userInfo);
-        setConversation(res.data.conversation)
-        console.log(res.data)
-      })
-      .catch((err) => {
-        return navigate(err?.response?.data?.redirect);
-      });
-  };
-
-  const onDeleteConversation = async () => {
-    api.defaults.withCredentials = true;
-    await api
-      .delete(`/deleteConversation/${id}`, { message: message })
-      .then((res) => {
-        setContacts(res.data.contacts);
-        setConvData(res.data.messages);
-        setMessage("");
-        return navigate(err?.response?.data?.redirect);
-      })
-      .catch((err) => {
-        console.log(err.message);
-        return navigate(err?.response?.data?.redirect);
-      });
-  };
-
-  // sending message to server
-  const scrollToEnd = useRef(null);
-    const handleScroll = ()=>{
-      scrollToEnd.current?.scrollIntoView({ behavior: 'smooth',
-        block: 'end',
-        inline: 'nearest' });
-    }
-
-
-
-
-  const data = {receiver: id,
-    message,
-    sender: userInfo._id,}
-
-
-  const sendMessage = (message) => {
-    socket.emit("messageFromClient", data) 
-    setMessage("");
-    setConversation((prevData) => [...prevData,{
-      receiver: id,
-      message,
-      sender: userInfo._id,
-    }])
-  };
-
-  // informing user of the action
-  useEffect(() => {
-    socket.on("messageFromServer", (data) => {
-      setConversation((prevData) => [...prevData, data]);
+  const sendMessage = () => {
+    if (message) {
+      let data = { message, receiver: id };
+      socket.emit("messageFromClient", data);
       setMessage("");
-      handleScroll()
-    });
-  }, [socket]);
+    }
+  };
 
+  socket?.once("messageFromServer", (data) => {
+    console.log("messageFromServer: ", data);
+    setMessages((prev) => [...prev, data]);
+  });
 
+  //   useEffect(() => {
+  //     socket.on("messageFromServer", data)
+  //     setMessages(prev=> [...prev,data])
+  //     return ()=>{
+  //       socket.off("messageFromServer")
+  //     }
+  // },[socket])
 
+  //fetch data at start
+
+  const fetchRequestedUserData = async () => {
+    //fetching requested user data
+    try {
+      api.defaults.withCredentials = true;
+      const { data } = await api.post(`/chat/${id}`);
+      if (data !== null) {
+        setRequestedUser(data?.talkingTo); //seting up the second user
+        setMessages(data?.messages || []); //refering to the messages object received
+      }
+    } catch (error) {
+      console.log(error.message);
+    }
+  };
 
   useEffect(() => {
-    secureLog();
+    fetchRequestedUserData();
   }, [id]);
+
+  useEffect(() => {
+    //connecting at mount with socket
+    const socketAuthID = JSON.parse(localStorage.getItem("userInfo"));
+    console.log(socketAuthID._id);
+
+    if (socketAuthID) {
+      socket = io("http://localhost:3000", {
+        auth: { userID: socketAuthID._id },
+        withCredentials: true,
+      });
+    }
+    console.log(socket);
+    socket.on("connect", () => console.log("socketON"));
+
+    return () => {
+      socket.off("connect");
+      socket.disconnect();
+    };
+  }, [userInfo]);
 
   return (
     <div className="bg-secondary-bg flex-[0.7] flex flex-col gap-[20px] px-6 py-4">
-      <ChatHeader
-        talkingTo={talkingTo}
-        onDeleteConversation={onDeleteConversation}
+      <ChatHeader requestedUser={requestedUser.userName} deleteID={id} />
+      <ChatViewer />
+      <Input
+        sendMessage={sendMessage}
+        setMessage={setMessage}
+        message={message}
       />
-      <ChatViewer conversation={conversation} scrollToEnd={scrollToEnd} />
-      <div className="flex items-center bg-transparent">
-        <input
-          value={message}
-          onChange={(e) => {
-            setMessage(e.target.value);
-          }}
-          className="w-[92%] py-6 px-4 bg-tertiary-bg text-text-primary rounded-[20px] text-[20px]"
-        />
-        <div className="mx-auto cursor-pointer bg-tertiary-bg text-text-secondary rounded-full text-center p-5 hover:scale-[1.1] duration-300 hover:text-accent-green ">
-          <SendRoundedIcon
-            onClick={() => {
-              sendMessage(message);
-            }}
-            className="!text-[30px] cursor-pointer translate-x-[3px] hover:scale-[1.5] duration-300 "
-          />
-        </div>
-      </div>
     </div>
   );
 }

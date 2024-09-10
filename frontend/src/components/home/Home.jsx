@@ -7,26 +7,19 @@ import AddFriend from "../addfriend/AddFriend";
 
 
 function Home() {
-  const [isAddFriend, setIsAddFriend ] = useState(false);
   const navigate = useNavigate();
-  const { userInfo, setUserInfo, contacts, setContacts, renderHome } =
-    useContext(DataContext);
+  const {setUserInfo ,toggleAddFriend, setToggleAddFriend} = useContext(DataContext);
 
 
   //handle add friend
-  const handleAddfriend = () => {
-    setIsAddFriend((previous) => !previous);
-  }
-
   const secureLog = async () => {
     api.defaults.withCredentials = true;
     await api
       .post("/home")
       .then((res) => {
         setUserInfo(res.data?.userInfo);
-        setContacts(res.data?.contacts || [])
+        localStorage.setItem('userInfo', JSON.stringify(res.data?.userInfo));
       })
-
       .catch((err) => {
         console.log(err);
         return navigate(err?.response?.data?.redirect);
@@ -35,15 +28,14 @@ function Home() {
 
   useEffect(() => {
     secureLog();
-    // console.log("userinfo in home" + userInfo,contacts);
-  }, [renderHome]);
+  }, []);
 
 
   return (
     < >
     <div className="bg-primary-bg w-full h-full rounded-xl flex overflow-hidden">
-      <Sidebar isAddFriend={handleAddfriend} />
-      {isAddFriend &&  <AddFriend handleAddfriend={handleAddfriend} />}
+      <Sidebar setToggleAddFriend={setToggleAddFriend}/>
+      {toggleAddFriend &&  <AddFriend />}
       <Outlet />
     </div>
     </ >
