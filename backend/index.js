@@ -5,7 +5,7 @@ import connectToDatabase from "./config/config.js";
 import User from "./modal/userModel.js";
 import { Chat } from "./modal/conversationModel.js";
 import { Message } from "./modal/messageModel.js";
-import { Contacts } from "./modal/contactsModel.js";
+import { deactivateJWT } from "./middleware/deactivateJWT.js";
 
 connectToDatabase();
 //------------------//
@@ -18,6 +18,10 @@ import { Server } from "socket.io";
 import cors from "cors";
 import { signToken } from "./utils/jwtAuth.js";
 import { authenticateToken } from "./middleware/authMiddleware.js";
+
+import findUserById from "./controllers/findUserById.js";
+import findUserChat from  "./controllers/findUserChat.js";
+import createChat from "./controllers/createChat.js";
 
 const app = express();
 
@@ -48,16 +52,16 @@ io.on("connection", async (socket) => {
   console.log("userConnected: ", socket.id)
 
   //checking auth and updating socket
-      console.log("auth log,",socket?.handshake?.auth)
+      // console.log("auth log,",socket?.handshake?.auth)
 
 
     if (socket?.handshake?.auth?.userID !== null) {
 
-      console.log("updating socket for ", socket.handshake.auth.userID)
+      // console.log("updating socket for ", socket.handshake.auth.userID)
 
       try { // console.log('userID from auth:', socket.handshake.auth.userID)
       let user = await User.findByIdAndUpdate(socket.handshake.auth.userID,{socketID: socket.id,},{ new: true })
-      console.log(user)
+  
     } catch (error) {
       console.log("connection event: ",error.message)
     }
@@ -67,15 +71,52 @@ io.on("connection", async (socket) => {
     socket.on("messageFromClient", async(data) => {//message from client
       try {
         let messageFromServer = {...data, sender:socket?.handshake?.auth?.userID}
+
         let receiverInfo = await User.findById(data.receiver).select("socketID")
-        console.log(receiverInfo)
-        if(receiverInfo){ 
-        socket.to(receiverInfo.socketID).emit("messageFromServer", messageFromServer);
+
+        let newMessage;
+        let newChat;
+
+        if(receiverInfo){
+            newMessage = await Message.create({//create message
+            sender:socket?.handshake?.auth?.userID, //user/senders id
+            receiver:receiverInfo._id,//fetched confirmed id
+            message:data.message//message
+          })
+
+          newChat = await Chat.findOneAndUpdate(//find and update message
+            {participants:{$all:[socket?.handshake?.auth?.userID , data.receiver]}},
+            {$addToSet:{message:newMessage._id}},{new:true})
+          
+          if(newChat == null){//if empty chat then creates new
+            
+            newChat = await Chat.create(
+              {participants:[socket?.handshake?.auth?.userID , data.id],
+                message:[newMessage._id] })
+
+            console.log("created chat", newChat)
+            
+             socket?.to(receiverInfo?.socketID).emit("messageFromServer", messageFromServer);//finally send
+          }
+          else{
+              //else
+              console.log("updated chat",newChat)
+            socket?.to(receiverInfo.socketID).emit("messageFromServer", messageFromServer);
+          }
+        
         }
+       
+          
       } catch (error) {
         console.log(error.message)
       }
       })
+
+    socket.on("updatedMessage", async(updatedMessage) =>{
+      let receiverInfo = await User.findById(updatedMessage.receiver).select("socketID")
+      socket.to(receiverInfo?.socketID).emit("updatedMessageFromServer", updatedMessage)
+    })
+
 
   socket.on("disconnect", () => {
     console.log("a user disconnected:" + socket.id);
@@ -199,39 +240,54 @@ app.post("/home", authenticateToken, async (req, res) => {
   }
 });
 
-app.post("/chat/:id", authenticateToken, async (req, res) => {
-  const { _id, userName, email } = req.user;
-  let receiverID = req.params.id;
-  try {
-    let talkingTo = await User.findById(receiverID).select("userName"); //fetch whom  user is talking to
-    console.log(talkingTo);
+app.post("/chat/:id", authenticateToken, async(req,res)=>{
+ try {
 
-    let { message: messages } = await Chat.findOne({
-      participants: { $all: [_id, receiverID] },
-    }).populate({
-      //fetch if there is any chats prior
-      path: "message",
-    });
+  let data = await findUserById(req,res)//fcontroller
 
-    if (messages == null) {
-      messages = [];
-    }
+  if(data){
+   const findChat =  await findUserChat(req);//controller
+   console.log("findchat", findChat)
 
-    return res
-      .status(200)
-      .json({
+    if(!findChat){
+      const newChat = await createChat(req);//controller
+      console.log(newChat)
+      if(newChat != null){
+        return res.status(200).json({
+          error: false,
+          message:"success",
+          talkingTo:data,
+          messages:[]
+        })
+      }}
+
+      return res.status(200).json({
         error: false,
-        message: "successfully fetched",
-        userInfo: { ...req.user },
-        talkingTo,
-        messages,
-      });
-  } catch (error) {
-    return res
-      .status(200)
-      .json({ error: true, message: "Error fetching conversation" });
-  }
-});
+        message:"success",
+        talkingTo:data,
+        messages:findChat.message})
+      }
+   
+
+
+ } catch (error) {
+  
+ }
+     
+     
+     
+      
+})
+  
+
+
+
+
+  
+
+
+
+    
 
 app.delete("/deleteConversation/:id", authenticateToken, async (req, res) => {
   try {
@@ -262,7 +318,6 @@ app.delete("/deleteConversation/:id", authenticateToken, async (req, res) => {
 app.post("/addFriend", authenticateToken, async (req, res) => {
   try {
     const { email } = req.body;
-
     if (email == req.user.email) {
       //handling if user inputs personal email instead
       return res
@@ -273,15 +328,30 @@ app.post("/addFriend", authenticateToken, async (req, res) => {
         });
     }
 
+
+
+
+
     const user = await User.findOne({ email }).select("userName"); //finding the yser
     console.log(user);
     if (user == null) {
       return res.status(404).json({ error: true, message: "no user found" });
     } else {
-      const chat = await Chat.create({
+
+      let chat = await Chat.findOne({participants:{$all:[user._id, req.user._id]}})
+
+      console.log(chat)
+      if(chat != null){
+        return res
+        .status(200)
+        .json({ error: true, message: "chat already exists"});
+      }
+
+        chat = await Chat.create({
         participants: [user._id, req.user._id],
         message: [],
-      });
+      })//end
+
       return res
         .status(200)
         .json({ error: false, message: "user found", user });
@@ -297,7 +367,7 @@ app.get("/fetchContacts", authenticateToken, async (req, res) => {
   try {
     const { _id } = req.user;
     const findContacts = await Chat.find({ participants: _id }).select(
-      "participants -_id"
+      "participants   -_id"
     );
     //using reduce to store everything in a single array
     let contacts = findContacts.reduce((acc, item) => {
@@ -312,7 +382,7 @@ app.get("/fetchContacts", authenticateToken, async (req, res) => {
 
     if (contacts) {
       contacts = await User.find({ _id: { $in: contacts } }).select(
-        "userName _id status"
+        "-password -chatId -socketID "
       );
     }
 
@@ -321,6 +391,8 @@ app.get("/fetchContacts", authenticateToken, async (req, res) => {
       message: "successfully",
       contacts: contacts,
     });
+
+
   } catch (error) {
     console.log(error.message);
     return res.status(500).json({
@@ -332,9 +404,14 @@ app.get("/fetchContacts", authenticateToken, async (req, res) => {
 
 app.patch("/updateMessage", authenticateToken, async (req, res) => {
   try {
-    const { messageID, message } = req.body;
-    const response = await Message.findByIdAndUpdate(messageID, { message });
-    console.log(response);
-    return res.status(200).json({ error: false, message: "api hit" });
+    const { messageID, updatedMessage } = req.body;
+    console.log(messageID, updatedMessage)
+    const response = await Message.findByIdAndUpdate(messageID, { message:updatedMessage },  { new: true });
+    console.log("updated message", response);
+    return res.status(200).json({ error: false, message: "api hit", updatedMessage:response });
   } catch (err) {}
 });
+
+app.post('/logout',deactivateJWT,(req,res)=>{
+  return res.status(200).json({error:false, message:"logged out"})
+})
