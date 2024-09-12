@@ -16,6 +16,16 @@ function AddFriend() {
             if(email ==""){
             return  setErr("please input email")
             }
+
+            for(let contact of contacts){
+              if(contact.email === email){
+                navigate(`chat/${contact._id}`)
+                return setErr("chat already exists")
+              }
+            }
+
+
+
             const res = await api.post('/addFriend', {email})
             if(!res.data.user)
             {   //if empty res

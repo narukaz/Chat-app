@@ -20,7 +20,7 @@ function App() {
       <Route path='home' element={<Home/>}>
        <Route index element={<Welcome/>}/> 
        <Route path='welcome' element={<Welcome/>}/>  
-       <Route path='chat/:id' element={<Chatbox/>}/>      
+       <Route path='chat' element={<Chatbox/>}/>      
       </Route>
     </Routes>            
     </div>
